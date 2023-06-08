@@ -2,36 +2,21 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('posts', {
+    await queryInterface.createTable('comments', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      title: {
-        allowNull: false,
-        type: Sequelize.STRING
-      },
       content: {
-        allowNull: false,
         type: Sequelize.TEXT
       },
-      forumsId: {
+      postId: {
         allowNull: false,
         type: Sequelize.INTEGER,
         references: {
-          model: 'forums',
-          key: 'id'
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
-      },
-      categoriesId: {
-        allowNull: false,
-        type: Sequelize.INTEGER,
-        references: {
-          model: 'categories',
+          model: 'posts',
           key: 'id'
         },
         onUpdate: 'CASCADE',
@@ -58,6 +43,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('posts');
+    await queryInterface.dropTable('comments');
   }
 };

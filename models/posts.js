@@ -6,6 +6,7 @@ module.exports = (sequelize) => {
       posts.belongsTo(models.forums, { foreignKey: 'forumsId' });
       posts.belongsTo(models.categories, { foreignKey: 'categoriesId' });
       posts.belongsTo(models.users, { foreignKey: 'userId' });
+      posts.hasMany(models.comments, {foreignKey: 'postId'});
     }
   }
   posts.init({

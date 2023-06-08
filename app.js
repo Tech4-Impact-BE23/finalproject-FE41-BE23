@@ -18,13 +18,18 @@ const users = require("./models/users")(sequelize);
 const forums = require("./models/forums")(sequelize);
 const posts = require("./models/posts")(sequelize);
 const categories = require("./models/categories")(sequelize);
+const comments = require("./models/comments")(sequelize);
 
 users.hasMany(posts, { foreignKey: "userId" });
 forums.hasMany(posts, { foreignKey: "forumsId" });
 categories.hasMany(posts, { foreignKey: "categoriesId" });
+users.hasMany(comments, { foreignKey: 'userId' });
+posts.hasMany(comments, { foreignKey: 'postId' });
 posts.belongsTo(users, { foreignKey: "userId" });
 posts.belongsTo(forums, { foreignKey: "forumsId" });
 posts.belongsTo(categories, { foreignKey: "categoriesId" });
+comments.belongsTo(posts, { foreignKey: "postId" });
+comments.belongsTo(users, { foreignKey: "userId" });
 
 app.get("/", (req, res) => {
     res.send("TRY");
@@ -198,7 +203,9 @@ app.post('/posts', async (req, res) => {
 
 app.get('/posts', async (req, res) => {
     try {
-        const allposts = await posts.findAll();
+        const allposts = await posts.findAll({
+            include: [forums, categories, users]
+        });
         res.status(201).json({ massage: 'Menampilkan semua posts', forum: allposts });
     }
     catch (error) {
@@ -206,22 +213,37 @@ app.get('/posts', async (req, res) => {
     }
 });
 
+app.get('/comments', async (req, res) => {
+    try {
+        const allComments = await comments.findAll({
+            attributes: ['id', 'content', 'createdAt', 'updatedAt'],
+            include: [posts, users]
+        }); // Retrieve all comments
+
+        res.status(200).json(allComments); // Send the comments as JSON response
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 app.get('/forums-posts', async (req, res) => {
     try {
-        const categoryId = req.query.categoriesId;
-        if (categoryId) {
+        const forumId = req.query.forumsId;
+        if (forumId) {
             const forumPosts = await posts.findAll({
-                attributes: ['categoriesId'],
-                include: [forums], where: {
-                    categoriesId: categoryId
+                // attributes: ['categoriesId'],
+                include: [forums, comments],
+                where: {
+                    categoriesId: forumId
                 }
             })
-            res.status(201).json({ forum: forumPosts });
+            res.status(201).json(forumPosts);
             return
         }
 
-        const forumPosts = await posts.findAll({ include: [forums] });
-        res.status(201).json({ forum: forumPosts });
+        // const forumPosts = await posts.findAll({ include: [forums] });
+        // res.status(201).json({ forum: forumPosts });
     } catch (error) {
         res.status(500).json({ error: error.massage });
     }
