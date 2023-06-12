@@ -1,29 +1,29 @@
 'use strict';
 const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
-  class comments extends Model {
+  class commentsReaction extends Model {
     static associate(models) {
       // define association here
-      comments.belongsTo(models.posts, { foreignKey: 'postId' });
-      comments.belongsTo(models.users, { foreignKey: 'userId' });
-      comments.hasMany(models.commentsReaction, { foreignKey: 'commentsId' });
+      commentsReaction.belongsTo(models.comments, { foreignKey: 'commentsId' });
+      commentsReaction.belongsTo(models.users, { foreignKey: 'userId' });
     }
   }
-  comments.init({
+  commentsReaction.init({
     id: {
       allowNull: false,
       autoIncrement: true,
       primaryKey: true,
       type: DataTypes.INTEGER
     },
-    content: {
-      type: DataTypes.TEXT
+    type: {
+      type: DataTypes.ENUM('like', 'dislike'),
+      allowNull: false,
     },
-    postId: {
+    commentId: {
       allowNull: false,
       type: DataTypes.INTEGER,
       references: {
-        model: 'posts',
+        model: 'comments',
         key: 'id'
       },
       onUpdate: 'CASCADE',
@@ -49,7 +49,7 @@ module.exports = (sequelize) => {
     }
   }, {
     sequelize,
-    modelName: 'comments',
+    modelName: 'commentsReaction',
   });
-  return comments;
+  return commentsReaction;
 };

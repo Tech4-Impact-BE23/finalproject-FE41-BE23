@@ -5,7 +5,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     const forum = [
       {
-        name: 'Pendidikan',
+        name: 'Pendidikan', 
         desc: 'Forum Pendidikan'
       },
       {

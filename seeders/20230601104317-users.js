@@ -39,10 +39,10 @@ module.exports = {
       user.updatedAt = new Date();
     });
 
-    await queryInterface.bulkInsert('Users', Users, {});
+    await queryInterface.bulkInsert('users', Users, {});
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete('Users', null, {})
+    await queryInterface.bulkDelete('users', null, {})
   }
 };
