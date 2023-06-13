@@ -7,12 +7,23 @@ const Sequelize = require("sequelize");
 const config = require("./config/config");
 const cors = require('cors');
 const auth = require("./middleware/auth");
+const upload = require("express-fileupload");
+const cloudinary = require("cloudinary").v2;
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+cloudinary.config({
+    cloud_name: process.env.CLOUD_NAME,
+    api_key: process.env.API_KEY,
+    api_secret: process.env.API_SECRET
+});
+
 app.use(bodyParser.json());
 app.use(cors());
+app.use(upload());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const sequelize = new Sequelize(config.development);
 
@@ -22,6 +33,7 @@ const posts = require("./models/posts")(sequelize);
 const categories = require("./models/categories")(sequelize);
 const comments = require("./models/comments")(sequelize);
 const commentsReaction = require("./models/commentsreaction")(sequelize);
+const articles = require("./models/articles")(sequelize);
 
 users.hasMany(posts, { foreignKey: "userId" });
 users.hasMany(comments, { foreignKey: "userId" });
@@ -529,7 +541,7 @@ app.post('/comments', auth, async (req, res) => {
     } catch (error) {
         res.status(500).json({
             error: error.message
-        })
+        });
     }
 });
 
@@ -543,7 +555,9 @@ app.get('/comments', auth, async (req, res) => {
 
         res.status(200).json(allComments); // Send the comments as JSON response
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({
+            error: error.message
+        });
     }
 });
 
@@ -594,7 +608,7 @@ app.delete('/comments/:id', auth, async (req, res) => {
 
         await comment.destroy();
 
-        res.json({
+        res.status(200).json({
             message: "Comments deleted successfully"
         });
     } catch (error) {
@@ -615,8 +629,8 @@ app.delete('/comments', auth, async (req, res) => {
         await comments.destroy({
             where: {},
         });
-        res.json({
-            message: "All Commenst deleted successfully.",
+        res.status(200).json({
+            message: "All Comments deleted successfully.",
         });
     } catch (error) {
         res.status(500).json({
@@ -625,28 +639,234 @@ app.delete('/comments', auth, async (req, res) => {
     }
 });
 
-app.get('/forums-posts', async (req, res) => {
+// User Add Reaction Comments
+app.post('/comments-reaction', auth, async (req, res) => {
     try {
-        const forumId = req.query.forumsId;
-        if (forumId) {
-            const forumPosts = await posts.findAll({
-                // attributes: ['categoriesId'],
-                include: [forums, comments],
-                where: {
-                    categoriesId: forumId
-                }
-            })
-            res.status(201).json(forumPosts);
-            return
+        const { type, commentId, userId } = req.body;
+
+        const comment = await comments.findByPk(commentId);
+        if (!comment) {
+            return res.status(404).json({
+                message: 'Comment not found.',
+            });
         }
 
-        // const forumPosts = await posts.findAll({ include: [forums] });
-        // res.status(201).json({ forum: forumPosts });
-    } catch (error) {
-        res.status(500).json({ error: error.massage });
-    }
-})
+        const user = await users.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found.',
+            });
+        }
 
+        const newReaction = await commentsReaction.create({
+            type,
+            commentId,
+            userId,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        res.status(201).json({
+            message: 'Reaction created successfully.', data: newReaction
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// user get total reaction
+app.get('/comments-reaction', auth, async (req, res) => {
+    try {
+        const typeReaction = await commentsReaction.findAll({
+            attributes: ['type', [Sequelize.fn('COUNT', Sequelize.col('type')), 'count']],
+            group: ['type']
+        });
+
+        const countReaction = {};
+        typeReaction.forEach((reaction) => {
+            countReaction[reaction.type] = reaction.get('count');
+        });
+
+        res.status(201).json({
+            countReaction
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// user Update Reactions
+app.put('/comments-reaction/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { type, commentId, userId } = req.body;
+
+        console.log('ID', id);
+
+        const reaction = await commentsReaction.findByPk(id);
+        console.log('Reactions:', reaction);
+
+        if (!reaction) {
+            return res.status(404).json({
+                message: 'Reactions not found.'
+            });
+        }
+
+        reaction.type = type;
+        reaction.commentId = commentId;
+        reaction.userId = userId;
+        await reaction.save();
+
+        res.status(200).json({
+            message: 'Reaction Updated successfully.', data: reaction
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// User Delete Reactions by Id
+app.delete('/comments-reaction/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const reaction = await commentsReaction.findByPk(id);
+
+        if (!reaction) {
+            return res.status(404).json({
+                message: 'Reactions not found.',
+            });
+        }
+
+        await reaction.destroy();
+
+        res.status(200).json({
+            message: 'Reaction deleted successfully.',
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// Admin Delete all Reactions
+app.delete('/comments-reaction', auth, async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                message: 'You are not authorized to perform this action'
+            });
+        }
+
+        await commentsReaction.destroy({
+            where: {},
+        });
+
+        res.status(200).json({
+            message: 'All Reactions deleted successfully.',
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// User get posts by forum id
+app.get('/forums-posts/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const forumPosts = await posts.findAll({
+            where: {
+                forumsId: id,
+            },
+        });
+
+        res.status(200).json({
+            message: 'Posts retrieved successfully.', data: forumPosts
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// User get posts by categories id
+app.get('/categories-posts/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const categoriesPosts = await posts.findAll({
+            where: {
+                categoriesId: id,
+            },
+        });
+
+        res.status(200).json({
+            message: 'Menampilkan posts berdasarkan forums id berhasil.',
+            data: categoriesPosts
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// User Add new Articles
+app.post('/articles', auth, async (req, res) => {
+    try {
+        const { title, desc, image_link } = req.body;
+
+        const newArticle = await articles.create({
+            title,
+            desc,
+            image_link,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        });
+
+        res.status(201).json({
+            message: 'Articles created successfully.',
+            data: newArticle
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// cloudinary upload image
+app.post('/upload', async (req, res) => {
+    if (!req.files || !req.files?.image) {
+        res.status(400);
+        res.json({
+            ok: false,
+        });
+
+        return;
+    }
+
+    const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
+    const base64 = `data:image/jpeg;base64,${_base64}`;
+
+    const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
+
+    res.status(200).json({
+        ok: true,
+        url: cloudinaryResponse.secure_url,
+    });
+});
 
 sequelize
     .sync()

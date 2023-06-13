@@ -17,7 +17,7 @@ module.exports = {
       {
         type: "Like",
         commentId: 1,
-        userId: 3
+        userId: 4
       },
       {
         type: "Like",
