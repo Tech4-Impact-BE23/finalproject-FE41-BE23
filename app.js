@@ -440,7 +440,7 @@ app.put('/posts/:id', auth, async (req, res) => {
         console.log('ID', id);
 
         const post = await posts.findByPk(id);
-        console.log('Posts:', categories);
+        console.log('Posts:', post);
 
         if (!post) {
             return res.status(404).json({
@@ -826,7 +826,7 @@ app.get('/categories-posts/:id', auth, async (req, res) => {
 });
 
 // User Add new Articles
-app.post('/articles', async (req, res) => {
+app.post('/articles', auth, async (req, res) => {
     try {
         const { title, desc } = req.body;
 
@@ -863,58 +863,166 @@ app.post('/articles', async (req, res) => {
     }
 });
 
-// User Add new Articles
-// app.post('/articles', auth, async (req, res) => {
-//     try {
-//         const { title, desc, image_link } = req.body;
+// user get all articles
+app.get('/articles', auth, async (req, res) => {
+    try {
+        const allarticles = await articles.findAll();
 
-//         const newArticle = await articles.create({
-//             title,
-//             desc,
-//             image_link,
-//             createdAt: new Date(),
-//             updatedAt: new Date(),
-//         });
+        res.status(200).json({
+            message: 'menampilkan semua articles.', data: allarticles
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
 
-//         res.status(201).json({
-//             message: 'Articles created successfully.',
-//             data: newArticle
-//         });
-//     } catch (error) {
-//         res.status(500).json({
-//             error: error.message
-//         });
-//     }
-// });
+// user get articles by Id
+app.get('/articles/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
 
-// cloudinary upload image
-// app.post('/upload', async (req, res) => {
-//     try {
-//         if (!req.files || !req.files.image) {
-//             res.status(400).json({
-//                 ok: false,
-//             });
-//             return;
-//         }
+        const article = await articles.findByPk({
+            where: {
+                id: id
+            },
+        });
 
-//         const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
-//         const base64 = `data:image/jpeg;base64,${_base64}`;
+        if (!article) {
+            return res.status(404).json({
+                message: "article not found"
+            });
+        }
 
-//         const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
+        res.status(200).json({
+            message: 'Menampilkan articles berdasarkan id.',
+            data: article
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
 
-//         res.status(200).json({
-//             ok: true,
-//             url: cloudinaryResponse.secure_url,
-//         });
-//     } catch (error) {
-//         res.status(500).json({
-//             ok: false,
-//             error: 'An error occurred while uploading the image.', 
-//             error: error.message,
-//         });
-//     }
-// });
+// user get articles by title
+app.get('/articles/:title', auth, async (req, res) => {
+    try {
+        const { title } = req.params;
 
+        const article = await article.findAll({
+            where: {
+                title: {
+                    [Op.like]: `%${title}%`,
+                },
+            },
+        });
+
+        res.status(200).json({
+            message: 'Menampilkan articles berdasarkan title yang ada.',
+            data: article
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// user get articles by desc that contain word
+app.get('/articles/:desc', auth, async (req, res) => {
+    try {
+        const { desc } = req.params;
+
+        const article = await article.findAll({
+            where: {
+                desc: {
+                    [Op.like]: `%${desc}%`,
+                },
+            },
+        });
+
+        res.status(200).json({
+            message: 'Menampilkan articles berdasarkan title yang ada.',
+            data: article
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+})
+
+// user update articles by Id
+app.put('/articles/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, desc } = req.body;
+
+        if (!req.files || !req.files.image) {
+            res.status(400).json({
+                ok: false,
+                error: 'Image file is required.',
+            });
+            return;
+        }
+
+        const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
+        const base64 = `data:image/jpeg;base64,${_base64}`;
+
+        const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
+
+        console.log('ID', id);
+
+        const article = await articles.findByPk(id);
+        console.log('Articles:', article);
+
+        if (!article) {
+            return res.status(404).json({
+                message: 'Articles not found'
+            });
+        }
+
+        article.title = title;
+        article.desc = desc;
+        article.image_link = cloudinaryResponse.secure_url;
+        await article.save();
+
+        res.status(200).json({
+            message: 'Article updated successfully.', data: article
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
+
+// Delete Articles by Id
+app.delete('/articles/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const article = await articles.findByPk(id);
+
+        if (!article) {
+            return res.status(404).json({
+                message: 'Articles not found.',
+            });
+        }
+
+        await article.destroy();
+
+        res.status(200).json({
+            message: 'Articles deleted successfully.',
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message
+        });
+    }
+});
 
 sequelize
     .sync()
