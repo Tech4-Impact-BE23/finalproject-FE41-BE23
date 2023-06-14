@@ -11,7 +11,7 @@ const upload = require("express-fileupload");
 const cloudinary = require("cloudinary").v2;
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
@@ -823,50 +823,96 @@ app.get('/categories-posts/:id', auth, async (req, res) => {
 });
 
 // User Add new Articles
-app.post('/articles', auth, async (req, res) => {
+app.post('/articles', async (req, res) => {
     try {
-        const { title, desc, image_link } = req.body;
+        const title = Buffer.from(req.text.title);
+        const desc = Buffer.from(req.text.desc);
+
+        if (!req.files || !req.files.image) {
+            res.status(400).json({
+                ok: false,
+                error: 'Image file is required.',
+            });
+            return;
+        }
+
+        const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
+        const base64 = `data:image/jpeg;base64,${_base64}`;
+
+        const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
 
         const newArticle = await articles.create({
             title,
             desc,
-            image_link,
+            image_link: cloudinaryResponse.secure_url,
             createdAt: new Date(),
             updatedAt: new Date(),
         });
 
         res.status(201).json({
-            message: 'Articles created successfully.',
-            data: newArticle
+            message: 'Article created successfully.',
+            data: newArticle,
         });
     } catch (error) {
         res.status(500).json({
-            error: error.message
+            error: 'An error occurred while creating the article.',
+            errorMessage: error.message,
         });
     }
 });
+
+// User Add new Articles
+// app.post('/articles', auth, async (req, res) => {
+//     try {
+//         const { title, desc, image_link } = req.body;
+
+//         const newArticle = await articles.create({
+//             title,
+//             desc,
+//             image_link,
+//             createdAt: new Date(),
+//             updatedAt: new Date(),
+//         });
+
+//         res.status(201).json({
+//             message: 'Articles created successfully.',
+//             data: newArticle
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             error: error.message
+//         });
+//     }
+// });
 
 // cloudinary upload image
-app.post('/upload', async (req, res) => {
-    if (!req.files || !req.files?.image) {
-        res.status(400);
-        res.json({
-            ok: false,
-        });
+// app.post('/upload', async (req, res) => {
+//     try {
+//         if (!req.files || !req.files.image) {
+//             res.status(400).json({
+//                 ok: false,
+//             });
+//             return;
+//         }
 
-        return;
-    }
+//         const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
+//         const base64 = `data:image/jpeg;base64,${_base64}`;
 
-    const _base64 = Buffer.from(req.files.image.data, 'base64').toString('base64');
-    const base64 = `data:image/jpeg;base64,${_base64}`;
+//         const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
 
-    const cloudinaryResponse = await cloudinary.uploader.upload(base64, { public_id: new Date().getTime() });
+//         res.status(200).json({
+//             ok: true,
+//             url: cloudinaryResponse.secure_url,
+//         });
+//     } catch (error) {
+//         res.status(500).json({
+//             ok: false,
+//             error: 'An error occurred while uploading the image.', 
+//             error: error.message,
+//         });
+//     }
+// });
 
-    res.status(200).json({
-        ok: true,
-        url: cloudinaryResponse.secure_url,
-    });
-});
 
 sequelize
     .sync()
