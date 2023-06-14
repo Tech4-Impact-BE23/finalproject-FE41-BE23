@@ -1,5 +1,6 @@
 'use strict';
 const bcrypt = require('bcryptjs');
+const gravatar = require('gravatar');
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -30,11 +31,13 @@ module.exports = {
     const passwordAdmin = await bcrypt.hash('admin', 10);
 
     Users.forEach(user => {
+      const avatar = gravatar.url(user.email, { s: '200', r: 'pg', d: 'mp' });
       if (user.role === 'admin') {
         user.password = passwordAdmin;
       } else {
         user.password = passwordUser;
       }
+      user.avatar = avatar;
       user.createdAt = new Date();
       user.updatedAt = new Date();
     });

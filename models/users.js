@@ -33,7 +33,18 @@ module.exports = (sequelize) => {
       },
       role: {
         type: DataTypes.ENUM("user", "admin"),
+      },avatar: {
+        type: DataTypes.STRING,
+        allowNull: false,
       },
+      createdAt: {
+        allowNull: false,
+        type: DataTypes.DATE,
+      },
+      updatedAt: {
+        allowNull: false,
+        type: DataTypes.DATE
+      }
     },
     {
       sequelize,

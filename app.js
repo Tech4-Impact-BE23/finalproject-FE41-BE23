@@ -9,6 +9,7 @@ const cors = require('cors');
 const auth = require("./middleware/auth");
 const upload = require("express-fileupload");
 const cloudinary = require("cloudinary").v2;
+const gravatar = require("gravatar");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -68,6 +69,7 @@ app.post("/register", async (req, res) => {
             });
         }
         const defaultRole = role ? role : "user";
+        const avatar = gravatar.url(email, { s: '200', r: 'pg', d: 'mp' });
 
         // Create a new user
         const newUser = await users.create({
@@ -75,6 +77,7 @@ app.post("/register", async (req, res) => {
             email,
             password,
             role: defaultRole,
+            avatar,
         });
         res.status(201).json({
             message: "User created successfully.", user: newUser
