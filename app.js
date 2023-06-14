@@ -61,13 +61,29 @@ app.get("/", (req, res) => {
 app.post("/register", async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
+
+        const lastUsers = await users.findOne({
+            order: [['id']],
+        });
+
+        let newId;
+        if (lastUsers) {
+            newId = lastUsers.id + 1;
+        } else {
+            newId = 1;
+        }
+
         // Check if the user with the given email already exists
-        const existingUser = await users.findOne({ where: { email } });
+        const existingUser = await users.findOne({
+            where: {
+                email
+            },
+        });
         if (existingUser) {
             return res.status(409).json({
                 message: "User with the provided email already exists."
             });
-        }
+        };
         const defaultRole = role ? role : "user";
         const avatar = gravatar.url(email, { s: '200', r: 'pg', d: 'mp' });
 
@@ -149,6 +165,29 @@ app.post("/login", async (req, res) => {
 app.post('/forums', auth, async (req, res) => {
     try {
         const { name, desc } = req.body;
+
+        const lastForums = await forums.findOne({
+            order: [['id']],
+        });
+
+        let newId;
+        if (lastForums) {
+            newId = lastForums.id + 1;
+        } else {
+            newId = 1;
+        }
+
+        const existingForums = await forums.findOne({
+            where: {
+                name
+            },
+        });
+
+        if (existingForums) {
+            return res.status(404).json({
+                message: "Forum Alredy Exist"
+            });
+        };
 
         const newForum = await forums.create({
             name,
@@ -261,6 +300,28 @@ app.post('/categories', auth, async (req, res) => {
     try {
         const { name, desc } = req.body;
 
+        const lastCategory = await categories.findOne({
+            order: [['id']],
+        });
+
+        let newId;
+        if (lastCategory) {
+            newId = lastCategory.id + 1;
+        } else {
+            newId = 1; // If no category exists, start with ID 1
+        }
+
+        const existingCategories = await categories.findOne({
+            where: {
+                name
+            },
+        });
+
+        if (existingCategories) {
+            return res.status(404).json({
+                message: 'Categories Alredy Exist'
+            });
+        };
         const newCategory = await categories.create({
             name,
             desc,
@@ -373,6 +434,28 @@ app.post('/posts', auth, async (req, res) => {
     try {
         const { title, content, userId, categoriesId, forumsId } = req.body;
 
+        const lastPosts = await posts.findOne({
+            order: [['id']],
+        });
+
+        let newId;
+        if (lastPosts) {
+            newId = lastPosts.id + 1;
+        } else {
+            newId = 1;
+        }
+
+        const existingPosts = await posts.findOne({
+            where: {
+                title
+            },
+        });
+
+        if (existingPosts) {
+            return res.status(404).json({
+                message: 'Post Alredy Exist'
+            });
+        };
         const user = await users.findByPk(userId);
         if (!user) {
             return res.status(404).json({
@@ -829,6 +912,17 @@ app.get('/categories-posts/:id', auth, async (req, res) => {
 app.post('/articles', auth, async (req, res) => {
     try {
         const { title, desc } = req.body;
+
+        const lastArticles = await articles.findOne({
+            order: [['id']],
+        });
+
+        let newId;
+        if (lastArticles) {
+            newId = lastArticles.id + 1;
+        } else {
+            newId = 1;
+        }
 
         if (!req.files || !req.files.image) {
             res.status(400).json({
