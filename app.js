@@ -11,7 +11,7 @@ const upload = require("express-fileupload");
 const cloudinary = require("cloudinary").v2;
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 
 cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
@@ -825,8 +825,7 @@ app.get('/categories-posts/:id', auth, async (req, res) => {
 // User Add new Articles
 app.post('/articles', async (req, res) => {
     try {
-        const title = Buffer.from(req.text.title);
-        const desc = Buffer.from(req.text.desc);
+        const { title, desc } = req.body;
 
         if (!req.files || !req.files.image) {
             res.status(400).json({
