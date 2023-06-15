@@ -10,6 +10,7 @@ const auth = require("./middleware/auth");
 const upload = require("express-fileupload");
 const cloudinary = require("cloudinary").v2;
 const gravatar = require("gravatar");
+const { Op } = require('sequelize');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -95,7 +96,7 @@ app.post("/register", async (req, res) => {
             role: defaultRole,
             avatar,
         });
-        res.status(201).json({
+        res.status(200).json({
             message: "User created successfully.", user: newUser
         });
     } catch (error) {
@@ -194,7 +195,7 @@ app.post('/forums', auth, async (req, res) => {
             desc,
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Forum created successfully.', data: newForum
         });
     } catch (error) {
@@ -208,7 +209,7 @@ app.post('/forums', auth, async (req, res) => {
 app.get('/forums', auth, async (req, res) => {
     try {
         const allforums = await forums.findAll();
-        res.status(201).json({
+        res.status(200).json({
             massage: 'Menampilkan semua forum', data: allforums
         });
     }
@@ -327,7 +328,7 @@ app.post('/categories', auth, async (req, res) => {
             desc,
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Category created successfully.', data: newCategory
         });
     } catch (error) {
@@ -341,7 +342,7 @@ app.post('/categories', auth, async (req, res) => {
 app.get('/categories', auth, async (req, res) => {
     try {
         const allcategories = await categories.findAll();
-        res.status(201).json({
+        res.status(200).json({
             massage: 'Menampilkan semua categories', data: allcategories
         });
     }
@@ -487,7 +488,7 @@ app.post('/posts', auth, async (req, res) => {
             updatedAt: new Date(),
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Post created successfully.', data: newPost
         });
     } catch (error) {
@@ -503,7 +504,7 @@ app.get('/posts', auth, async (req, res) => {
         const allposts = await posts.findAll({
             include: [forums, categories, users]
         });
-        res.status(201).json({
+        res.status(200).json({
             massage: 'Menampilkan semua posts', data: allposts
         });
     }
@@ -621,7 +622,7 @@ app.post('/comments', auth, async (req, res) => {
             updatedAt: new Date(),
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Comment created successfully.', data: newComment
         });
     } catch (error) {
@@ -752,7 +753,7 @@ app.post('/comments-reaction', auth, async (req, res) => {
             updatedAt: new Date(),
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Reaction created successfully.', data: newReaction
         });
     } catch (error) {
@@ -775,7 +776,7 @@ app.get('/comments-reaction', auth, async (req, res) => {
             countReaction[reaction.type] = reaction.get('count');
         });
 
-        res.status(201).json({
+        res.status(200).json({
             countReaction
         });
     } catch (error) {
@@ -865,6 +866,31 @@ app.delete('/comments-reaction', auth, async (req, res) => {
     }
 });
 
+// User get total reaction by comments id
+app.get('/commenst/:id/reactions', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const typeReaction = await commentsReaction.findAll({
+            attributes: ['type', [Sequelize.fn('COUNT', Sequelize.col('type')), 'count']],
+            where: {
+                commentId: id
+            },
+            group: ['type']
+        });
+
+        const countReaction = {};
+        typeReaction.forEach((reaction) => {
+            countReaction[reaction.type] = reaction.get('count');
+        });
+
+        res.status(200).json({
+            countReaction
+        });
+    } catch (error) {
+
+    }
+});
 // User get posts by forum id
 app.get('/forums-posts/:id', auth, async (req, res) => {
     try {
@@ -922,7 +948,19 @@ app.post('/articles', auth, async (req, res) => {
             newId = lastArticles.id + 1;
         } else {
             newId = 1;
-        }
+        };
+
+        const existingArticles = await articles.findOne({
+            where: {
+                title
+            },
+        });
+
+        if (existingArticles) {
+            return res.status(409).json({
+                message: "Article alredy exist."
+            });
+        };
 
         if (!req.files || !req.files.image) {
             res.status(400).json({
@@ -945,7 +983,7 @@ app.post('/articles', auth, async (req, res) => {
             updatedAt: new Date(),
         });
 
-        res.status(201).json({
+        res.status(200).json({
             message: 'Article created successfully.',
             data: newArticle,
         });
@@ -973,11 +1011,11 @@ app.get('/articles', auth, async (req, res) => {
 });
 
 // user get articles by Id
-app.get('/articles/:id', auth, async (req, res) => {
+app.get('/articles/id/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
 
-        const article = await articles.findByPk({
+        const article = await articles.findOne({
             where: {
                 id: id
             },
@@ -1001,17 +1039,23 @@ app.get('/articles/:id', auth, async (req, res) => {
 });
 
 // user get articles by title
-app.get('/articles/:title', auth, async (req, res) => {
+app.get('/articles/title/:title', auth, async (req, res) => {
     try {
         const { title } = req.params;
 
-        const article = await article.findAll({
+        const article = await articles.findAll({
             where: {
                 title: {
                     [Op.like]: `%${title}%`,
                 },
             },
         });
+
+        if (!article) {
+            return res.status(404).json({
+                message: 'Article not found',
+            });
+        }
 
         res.status(200).json({
             message: 'Menampilkan articles berdasarkan title yang ada.',
@@ -1025,17 +1069,23 @@ app.get('/articles/:title', auth, async (req, res) => {
 });
 
 // user get articles by desc that contain word
-app.get('/articles/:desc', auth, async (req, res) => {
+app.get('/articles/desc/:desc', auth, async (req, res) => {
     try {
         const { desc } = req.params;
 
-        const article = await article.findAll({
+        const article = await articles.findAll({
             where: {
                 desc: {
                     [Op.like]: `%${desc}%`,
                 },
             },
         });
+
+        if (!article) {
+            return res.status(404).json({
+                message: 'Article not found',
+            });
+        }
 
         res.status(200).json({
             message: 'Menampilkan articles berdasarkan title yang ada.',
