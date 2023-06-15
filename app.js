@@ -877,7 +877,7 @@ app.delete('/comments-reaction', auth, async (req, res) => {
 });
 
 // User get total reaction by comments id
-app.get('/commenst/:id/reactions', auth, async (req, res) => {
+app.get('/comments/:id/reactions', auth, async (req, res) => {
     try {
         const { id } = req.params;
 
