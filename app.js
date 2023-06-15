@@ -515,6 +515,24 @@ app.get('/posts', auth, async (req, res) => {
     }
 });
 
+// User Get All Posts by Id
+app.get('/posts/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const onePosts = await posts.findByPk(id);
+
+        res.status(200).json({
+            massage: 'Menampilkan semua posts', data: onePosts
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            error: error.massage
+        });
+    }
+});
+
 // User Update posts
 app.put('/posts/:id', auth, async (req, res) => {
     try {
@@ -891,6 +909,7 @@ app.get('/commenst/:id/reactions', auth, async (req, res) => {
 
     }
 });
+
 // User get posts by forum id
 app.get('/forums-posts/:id', auth, async (req, res) => {
     try {
