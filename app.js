@@ -781,21 +781,13 @@ app.post('/comments-reaction', auth, async (req, res) => {
     }
 });
 
-// user get total reaction
+// user get all reaction
 app.get('/comments-reaction', auth, async (req, res) => {
     try {
-        const typeReaction = await commentsReaction.findAll({
-            attributes: ['type', [Sequelize.fn('COUNT', Sequelize.col('type')), 'count']],
-            group: ['type']
-        });
-
-        const countReaction = {};
-        typeReaction.forEach((reaction) => {
-            countReaction[reaction.type] = reaction.get('count');
-        });
+        const allReaction = await comments.findAll();
 
         res.status(200).json({
-            countReaction
+            massage: 'Menampilkan semua Reactions', data: allReaction
         });
     } catch (error) {
         res.status(500).json({
