@@ -62,7 +62,7 @@
 - `GET /comments-reaction/:id`: Retrieve a specific reaction by ID.
 - `PUT /comments-reaction/:id`: Update a specific reaction by ID.
 - `DELETE /comments-reaction/:id`: Delete a specific reaction by ID.
-- `GET /comments/:id/reaction': Retive a specific reaction by comment ID.
+- `GET /comments/:id/reaction`: Retive a specific reaction by comment ID.
 
 
 ## API Documentation 
