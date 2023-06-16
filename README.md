@@ -68,3 +68,9 @@
 ## API Documentation 
 
 Please refer to the [API Documentation](https://documenter.getpostman.com/view/22415938/2s93sf1qry) for detailed information about the API endpoints and their usage.
+
+
+## ERD (Entity-Relationship Diagram)
+
+Please refer to the [ERD](https://drive.google.com/file/d/1PxWnXWDp0MIDLAZCWfmlMASsazEc_YnV/view?usp=sharing) for the visual representation of the database schema and relationships.
+
